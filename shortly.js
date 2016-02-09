@@ -23,7 +23,7 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(session({secret: 'keyboard cat'}));
+app.use(session({secret: 'keyboard cat', cookie: {maxAge: 1000}}));
 
 
 
@@ -67,6 +67,7 @@ function isAuth(req, res, next) {
 app.get('/logout', function(req, res){
     req.session.destroy(function(){
       session.user = false;
+      console.log('does session exist?????????: ', session);
         res.redirect('/login');
     });
 });
