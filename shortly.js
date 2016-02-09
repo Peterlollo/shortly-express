@@ -23,15 +23,66 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use(session({secret: 'keyboard cat'}));
+
+
 
 app.use(express.static(__dirname + '/public'));
 
 
 
 
-app.get('/',
-function(req, res) {
-  res.render('index');
+///FROM ONLINE AUTHENTICATION WEBSITE
+
+function isAuth(req, res, next) {
+  if (session.user) {
+    next();
+  } else {
+    req.session.error = 'Access denied!';
+    res.redirect('/login');
+  }
+}
+ 
+// app.get('/', function(request, response) {
+//    response.send('This is the homepage');
+// });
+ 
+// app.get('/login', function(request, response) {
+//    response.send('<form method="post" action="/login">' +
+//   '<p>' +
+//     '<label>Username:</label>' +
+//     '<input type="text" name="username">' +
+//   '</p>' +
+//   '<p>' +
+//     '<label>Password:</label>' +
+//     '<input type="text" name="password">' +
+//   '</p>' +
+//   '<p>' +
+//     '<input type="submit" value="Login">' +
+//   '</p>' +
+//   '</form>');
+// });
+
+ 
+app.get('/logout', function(req, res){
+    req.session.destroy(function(){
+      session.user = false;
+        res.redirect('/login');
+    });
+});
+ 
+// app.get('/restricted', restrict, function(request, response){
+//   response.send('This is the restricted area! Hello ' + request.session.user + '! click <a href="/logout">here to logout</a>');
+// });
+ 
+///END OF ONLINE AUTHENTICATION WEBSITE
+
+
+
+
+app.get('/', isAuth, function(req, res) {
+    // console.log('----------------- Gen ID,,,,', req.sessionID);
+    res.render('index');  
 });
 
 app.get('/create', 
@@ -85,25 +136,30 @@ app.get('/signup', function(req, res) {
 
 app.get('/login', function(req, res){
   res.render('login');
-  res.send(200);
+
 })
 
+
+// User log-in page
 app.post('/login', function(req, res){
   var passwordInput = req.body.password;
   var usernameInput = req.body.username;
   db.knex('users').select('username', 'password').then(function(user) {
-    console.log('password;, ', user);
     user.forEach(function(item) {
       bcrypt.compare(passwordInput, item.password, function (err, response) {
         if(response === true && item.username === usernameInput) {
+          session.user = true;
           res.redirect('/');
-         }
-      });
-     
-      
-    })
+        }
+      }); 
+      // response.redirect('/login');
+    });
   });
-})
+});
+
+
+
+
 
 // User signup page
 app.post('/signup', function(req, res) {
