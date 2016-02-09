@@ -23,75 +23,31 @@ app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(session({secret: 'keyboard cat', cookie: {maxAge: 1000}}));
-
-
+app.use(session({secret: 'keyboard cat', cookie: {maxAge: 60000}}));
 
 app.use(express.static(__dirname + '/public'));
 
 
 
-
-///FROM ONLINE AUTHENTICATION WEBSITE
-
 function isAuth(req, res, next) {
-  if (session.user) {
+  if (req.session.user) {
     next();
   } else {
     req.session.error = 'Access denied!';
     res.redirect('/login');
   }
 }
- 
-// app.get('/', function(request, response) {
-//    response.send('This is the homepage');
-// });
- 
-// app.get('/login', function(request, response) {
-//    response.send('<form method="post" action="/login">' +
-//   '<p>' +
-//     '<label>Username:</label>' +
-//     '<input type="text" name="username">' +
-//   '</p>' +
-//   '<p>' +
-//     '<label>Password:</label>' +
-//     '<input type="text" name="password">' +
-//   '</p>' +
-//   '<p>' +
-//     '<input type="submit" value="Login">' +
-//   '</p>' +
-//   '</form>');
-// });
-
- 
-app.get('/logout', function(req, res){
-    req.session.destroy(function(){
-      session.user = false;
-      console.log('does session exist?????????: ', session);
-        res.redirect('/login');
-    });
-});
- 
-// app.get('/restricted', restrict, function(request, response){
-//   response.send('This is the restricted area! Hello ' + request.session.user + '! click <a href="/logout">here to logout</a>');
-// });
- 
-///END OF ONLINE AUTHENTICATION WEBSITE
-
-
-
 
 app.get('/', isAuth, function(req, res) {
-    // console.log('----------------- Gen ID,,,,', req.sessionID);
     res.render('index');  
 });
 
-app.get('/create', 
+app.get('/create', isAuth,
 function(req, res) {
   res.render('index');
 });
 
-app.get('/links', 
+app.get('/links', isAuth,
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
@@ -130,18 +86,31 @@ function(req, res) {
   });
 });
 
+/************************************************************/
+// Write your authentication routes here
+/************************************************************/
+
 app.get('/signup', function(req, res) {
   res.render('signup');
   res.send(200);
 });
 
+app.post('/signup', function(req, res) {
+  var newUser = new User(req.body);
+  newUser.save().done();
+  req.session.user = req.body.username;
+  res.redirect('/');
+});
+
+
 app.get('/login', function(req, res){
-  res.render('login');
+  if (req.session.user) {
+    res.redirect('/');
+  } else {
+    res.render('login');
+  }
+});
 
-})
-
-
-// User log-in page
 app.post('/login', function(req, res){
   var passwordInput = req.body.password;
   var usernameInput = req.body.username;
@@ -149,66 +118,24 @@ app.post('/login', function(req, res){
     user.forEach(function(item) {
       bcrypt.compare(passwordInput, item.password, function (err, response) {
         if(response === true && item.username === usernameInput) {
-          session.user = true;
-          res.redirect('/');
+          req.session.regenerate(function(){
+            req.session.user = usernameInput;
+            session.user = true;
+            res.redirect('/');
+          });
         }
       }); 
-      // response.redirect('/login');
     });
   });
 });
 
 
-
-
-
-// User signup page
-app.post('/signup', function(req, res) {
-  var newUser = new User(req.body);
-  newUser.save().done();
-  res.redirect('/');
+app.get('/logout', function(req, res){
+    req.session.destroy(function(){
+      session.user = false;
+        res.redirect('/login');
+    });
 });
-
-/************************************************************/
-// Write your authentication routes here
-/************************************************************/
-
-// function checkAuth(req, res, next) {
-//   if (!req.session.user_id) {
-//     res.send('You are not authorized to view this page');
-//   } else {
-//     next();
-//   }
-// }
-
-// app.use('/test', checkAuth, function(req, res) {
-//   res.send('if you are viewing this page that means you are logged in');
-// });
-
-// app.post('/login', function(request, response) {
-//   var username = request.body.username;
-//   var password = request.body.password;
-
-//   if (username == 'demo' && password == 'password') {
-//     request.session.regenerate(function() {
-//       request.session.user = username;
-//       // response.redirect('/restricted');
-//     });
-//   } else {
-//     response.redirect('login');
-//   }
-// });
-
-// app.get('/', function(request, response){
-//   // Authenticate user
-//   //  If user not signed in
-//   //    Redirect to login page
-// });
-
-// app.get('/restricted', restrict, function(request, response) {
-//   response.send('Restricted area!');
-// })
-
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
 // assume the route is a short code and try and handle it here.
