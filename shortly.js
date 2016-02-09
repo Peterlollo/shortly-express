@@ -4,6 +4,7 @@ var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var session = require('express-session');
+var bcrypt = require('bcrypt-nodejs');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -93,24 +94,22 @@ app.post('/login', function(req, res){
   db.knex('users').select('username', 'password').then(function(user) {
     console.log('password;, ', user);
     user.forEach(function(item) {
-      if(item.password === passwordInput && item.username === usernameInput) {
-        res.redirect('/');
-        res.send(301);
-      } 
-      // else {
-      //   res.header("Content-Type", "text/cache-manifest");
-      //   res.send(200);
-      // }
-      res.send(400);
+      bcrypt.compare(passwordInput, item.password, function (err, response) {
+        if(response === true && item.username === usernameInput) {
+          res.redirect('/');
+         }
+      });
+     
+      
     })
   });
 })
 
+// User signup page
 app.post('/signup', function(req, res) {
   var newUser = new User(req.body);
   newUser.save().done();
   res.redirect('/');
-  res.send(200);  
 });
 
 /************************************************************/
