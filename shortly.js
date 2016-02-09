@@ -2,7 +2,8 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-
+var cookieParser = require('cookie-parser');
+var session = require('express-session');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -20,10 +21,14 @@ app.use(partials());
 app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
+
+
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
+
+
+app.get('/',
 function(req, res) {
   res.render('index');
 });
@@ -72,11 +77,81 @@ function(req, res) {
   });
 });
 
+app.get('/signup', function(req, res) {
+  res.render('signup');
+  res.send(200);
+});
+
+app.get('/login', function(req, res){
+  res.render('login');
+  res.send(200);
+})
+
+app.post('/login', function(req, res){
+  var passwordInput = req.body.password;
+  var usernameInput = req.body.username;
+  db.knex('users').select('username', 'password').then(function(user) {
+    console.log('password;, ', user);
+    user.forEach(function(item) {
+      if(item.password === passwordInput && item.username === usernameInput) {
+        res.redirect('/');
+        res.send(301);
+      } 
+      // else {
+      //   res.header("Content-Type", "text/cache-manifest");
+      //   res.send(200);
+      // }
+      res.send(400);
+    })
+  });
+})
+
+app.post('/signup', function(req, res) {
+  var newUser = new User(req.body);
+  newUser.save().done();
+  res.redirect('/');
+  res.send(200);  
+});
+
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
 
+// function checkAuth(req, res, next) {
+//   if (!req.session.user_id) {
+//     res.send('You are not authorized to view this page');
+//   } else {
+//     next();
+//   }
+// }
 
+// app.use('/test', checkAuth, function(req, res) {
+//   res.send('if you are viewing this page that means you are logged in');
+// });
+
+// app.post('/login', function(request, response) {
+//   var username = request.body.username;
+//   var password = request.body.password;
+
+//   if (username == 'demo' && password == 'password') {
+//     request.session.regenerate(function() {
+//       request.session.user = username;
+//       // response.redirect('/restricted');
+//     });
+//   } else {
+//     response.redirect('login');
+//   }
+// });
+
+// app.get('/', function(request, response){
+//   // Authenticate user
+//   //  If user not signed in
+//   //    Redirect to login page
+// });
+
+// app.get('/restricted', restrict, function(request, response) {
+//   response.send('Restricted area!');
+// })
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
